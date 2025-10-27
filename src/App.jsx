@@ -332,8 +332,8 @@ const InventoryForm = ({
     }
   }, [initialData, isOpen]);
 
-  // This is the NEW code
-const handleChange = (e) => {
+
+  const handleChange = (e) => {
   const { name, value, type } = e.target;
   
   if (name === 'batchNumber') {
