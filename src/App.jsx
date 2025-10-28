@@ -2,7 +2,9 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { initializeApp } from 'firebase/app';
 import { 
   getAuth, 
-  signInAnonymously, 
+  signInWithEmailAndPassword, 
+  signOut,
+  signInAnonymously,
   signInWithCustomToken, 
   onAuthStateChanged 
 } from 'firebase/auth';
@@ -37,7 +39,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 
-// --- Firebase Configuration ---
+//  Firebase Configuration 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_API_KEY,
   authDomain: import.meta.env.VITE_AUTH_DOMAIN,
@@ -48,14 +50,12 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_MEASUREMENT_ID
 };
 
-const appId = "rxoptima-app";
-
-// --- Initialize Firebase ---
+//  Initialize Firebase 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// --- Helper Functions ---
+//  Helper Functions 
 const formatDate = (timestamp) => {
   if (!timestamp) return 'N/A';
   return timestamp.toDate().toLocaleDateString('en-US', {
@@ -72,7 +72,7 @@ const formatCurrency = (amount) => {
   }).format(amount);
 };
 
-// --- Custom Modal Component ---
+//  Custom Modal Component 
 const Modal = ({ isOpen, onClose, title, children }) => {
   if (!isOpen) return null;
 
@@ -102,7 +102,7 @@ const Modal = ({ isOpen, onClose, title, children }) => {
   );
 };
 
-// --- Custom Alert Component ---
+//  Custom Alert Component 
 const CustomAlert = ({ message, type, onClose }) => {
   if (!message) return null;
 
@@ -137,15 +137,15 @@ const CustomAlert = ({ message, type, onClose }) => {
   );
 };
 
-// --- Loading Spinner ---
+//  Loading Spinner 
 const Spinner = () => (
   <div className="flex items-center justify-center h-full">
     <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
   </div>
 );
 
-// --- Header/Navigation Component ---
-const Header = ({ currentView, setView }) => {
+//  Header/Navigation Component 
+const Header = ({ currentView, setView, onLogout}) => {
   const navItems = [
     { name: 'Dashboard', icon: LayoutDashboard, view: 'dashboard' },
     { name: 'Inventory', icon: Boxes, view: 'inventory' },
@@ -176,12 +176,18 @@ const Header = ({ currentView, setView }) => {
               </button>
             ))}
           </div>
+          <div className="hidden sm:ml-6 sm:flex sm:items-center">
+            <button
+              onClick={onLogout}
+              className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              Logout
+            </button>
+          </div> 
           <div className="flex items-center sm:hidden">
-            {/* Mobile menu button (can be implemented later) */}
           </div>
         </div>
       </div>
-       {/* Mobile Menu Nav */}
        <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white shadow-t-lg border-t border-gray-200">
         <div className="flex justify-around">
           {navItems.map((item) => (
@@ -204,7 +210,7 @@ const Header = ({ currentView, setView }) => {
   );
 };
 
-// --- Dashboard Component ---
+//  Dashboard Component 
 const Dashboard = ({ inventory, sales, prescriptions }) => {
   const now = new Date();
   
@@ -294,7 +300,7 @@ const Dashboard = ({ inventory, sales, prescriptions }) => {
   );
 };
 
-// --- Inventory Form Component ---
+//  Inventory Form Component 
 const InventoryForm = ({
   isOpen,
   onClose,
@@ -482,7 +488,7 @@ const InventoryForm = ({
   );
 };
 
-// --- Inventory Component ---
+//  Inventory Component 
 const Inventory = ({ userId, inventory, setAlert }) => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingDrug, setEditingDrug] = useState(null);
@@ -646,7 +652,7 @@ const Inventory = ({ userId, inventory, setAlert }) => {
   );
 };
 
-// --- Point of Sale (POS) Component ---
+//  Point of Sale (POS) Component 
 const POS = ({ userId, inventory, setAlert }) => {
   const [cart, setCart] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -894,7 +900,7 @@ const POS = ({ userId, inventory, setAlert }) => {
   );
 };
 
-// --- Receipt Modal Component ---
+//  Receipt Modal Component 
 const ReceiptModal = ({ isOpen, onClose, saleData }) => {
   if (!isOpen || !saleData) return null;
 
@@ -989,7 +995,7 @@ const ReceiptModal = ({ isOpen, onClose, saleData }) => {
   );
 };
 
-// --- Prescription Form Component ---
+//  Prescription Form Component 
 const PrescriptionForm = ({
   isOpen,
   onClose,
@@ -1169,7 +1175,7 @@ const PrescriptionForm = ({
   );
 };
 
-// --- Prescriptions Component ---
+//  Prescriptions Component 
 const Prescriptions = ({ userId, prescriptions, inventory, setAlert }) => {
   const [isFormOpen, setIsFormOpen] = useState(false);
 
@@ -1302,9 +1308,88 @@ const Prescriptions = ({ userId, prescriptions, inventory, setAlert }) => {
   );
 };
 
+//  Login Page Component 
+const LoginPage = ({ onLogin, setAlert }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!email || !password) {
+      setAlert({ message: 'Please enter both email and password.', type: 'error' });
+      return;
+    }
+    setIsLoading(true);
+    try {
+      // Firebase sign in function
+      await onLogin(email, password);
+      // setAlert is handled by the main App component on success
+    } catch (error) {
+      console.error("Login Error: ", error.code);
+      let errorMessage = 'Login failed. Please check your credentials.';
+      if (error.code === 'auth/invalid-credential') {
+        errorMessage = 'Invalid email or password.';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Too many failed attempts. Please try again later.';
+      }
+      setAlert({ message: errorMessage, type: 'error' });
+    }
+    setIsLoading(false);
+  };
 
-// --- Main App Component ---
+  return ( 
+    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-xl shadow-xl">
+        <div className="text-center">
+          <h2 className="text-3xl font-bold text-indigo-600">
+            RxOptima
+          </h2>
+          <p className="mt-2 text-gray-600">Administrator Login</p>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Email Address
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Password
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              required
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400"
+          >
+            {isLoading ? (
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            ) : (
+              'Sign In'
+            )}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+};
+//  Main App Component 
 export default function App() {
+  const appId = "rxoptima-app";
   const [userId, setUserId] = useState(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [currentView, setView] = useState('dashboard');
@@ -1315,26 +1400,29 @@ export default function App() {
   
   const [isLoading, setIsLoading] = useState(true);
   const [alert, setAlert] = useState({ message: '', type: '' });
+  const handleLogin = async (email, password) => {
+    await signInWithEmailAndPassword(auth, email, password);
+    setAlert({ message: 'Login successful! Welcome.', type: 'success' });
+  };
+  const handleLogout = async () => {
+    await signOut(auth);
+    setAlert({ message: 'You have been logged out.', type: 'success' });
+  };
 
-  // --- Authentication Effect ---
+  // Authentication Effect
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         setUserId(user.uid);
-        setIsAuthReady(true);
       } else {
-        try {
-          await signInAnonymously(auth)
-        } catch (error) {
-          console.error('Authentication error:', error);
-          setIsAuthReady(true); // Still ready, but auth failed
-        }
+        setUserId(null);
       }
+      setIsAuthReady(true);
     });
     return () => unsubscribe();
   }, []);
 
-  // --- Data Subscription Effect ---
+  // Data Subscription Effect 
   useEffect(() => {
     if (!isAuthReady || !userId) {
       // Don't fetch data until auth is ready and we have a user ID
@@ -1388,9 +1476,9 @@ export default function App() {
       unsubscribers.forEach(unsub => unsub());
     };
 
-  }, [isAuthReady, userId]);
+  }, [isAuthReady, userId, appId]);
 
-  // --- Alert Timer ---
+  //  Alert Timer 
   useEffect(() => {
     if (alert.message) {
       const timer = setTimeout(() => {
@@ -1400,7 +1488,7 @@ export default function App() {
     }
   }, [alert]);
 
-  // --- Render Logic ---
+  //  Render Logic 
   const renderView = () => {
     if (!isAuthReady || isLoading) {
       return (
@@ -1434,43 +1522,46 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-100 font-inter pb-16 sm:pb-0">
-      <style>
-        {`
-          @media print {
-            /* Hide everything except the printable area */
-            body * {
-              visibility: hidden;
-            }
-            .printable-area, .printable-area * {
-              visibility: visible;
-            }
-            /* Position the printable area at the top */
-            .printable-area {
-              position: absolute;
-              left: 0;
-              top: 0;
-              width: 100%;
-            }
-            /* Hide modal's backdrop and buttons */
-            .no-print {
-              display: none;
-            }
-          }
-        `}
-      </style>
       <CustomAlert 
         message={alert.message} 
         type={alert.type} 
         onClose={() => setAlert({ message: '', type: '' })} 
       />
-      
-      {isAuthReady && userId && (
-        <Header currentView={currentView} setView={setView} />
+      <style>
+        {`
+          @media print {
+            body * { visibility: hidden; }
+            .printable-area, .printable-area * { visibility: visible; }
+            .printable-area { position: absolute; left: 0; top: 0; width: 100%; }
+            .no-print { display: none; }
+          }
+        `}
+      </style>
+
+      {!isAuthReady && (
+        <div className="flex items-center justify-center h-screen">
+          <Spinner />
+        </div>
+      )}
+      {isAuthReady && !userId && (
+        <LoginPage 
+          onLogin={handleLogin} 
+          setAlert={setAlert} 
+        />
       )}
       
-      <main>
-        {renderView()}
-      </main>
+      {isAuthReady && userId && (
+        <>
+          <Header 
+            currentView={currentView} 
+            setView={setView} 
+            onLogout={handleLogout} 
+          />
+          <main>
+            {renderView()}
+          </main>
+        </>
+      )}
     </div>
   );
 }
