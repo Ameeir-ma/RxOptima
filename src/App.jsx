@@ -1387,6 +1387,55 @@ const LoginPage = ({ onLogin, setAlert }) => {
     </div>
   );
 };
+
+// --- Confirmation Modal Component ---
+const ConfirmationModal = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  title,
+  message,
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white rounded-xl shadow-2xl w-full max-w-sm m-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="p-6 text-center">
+          <div className="flex justify-center mb-4">
+            <div className="w-12 h-12 flex items-center justify-center rounded-full bg-red-100">
+              <AlertTriangle size={24} className="text-red-600" />
+            </div>
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+          <p className="text-sm text-gray-600 mt-2">
+            {message}
+          </p>
+        </div>
+        <div className="flex justify-stretch items-center bg-gray-50 rounded-b-xl border-t">
+          <button
+            onClick={onClose}
+            className="w-1/2 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-bl-xl focus:outline-none"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="w-1/2 px-4 py-3 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-br-xl focus:outline-none"
+          >
+            Yes, Logout
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 //  Main App Component 
 export default function App() {
   const appId = "rxoptima-app";
@@ -1400,6 +1449,7 @@ export default function App() {
   
   const [isLoading, setIsLoading] = useState(true);
   const [alert, setAlert] = useState({ message: '', type: '' });
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const handleLogin = async (email, password) => {
     await signInWithEmailAndPassword(auth, email, password);
     setAlert({ message: 'Login successful! Welcome.', type: 'success' });
@@ -1408,7 +1458,13 @@ export default function App() {
     await signOut(auth);
     setAlert({ message: 'You have been logged out.', type: 'success' });
   };
-
+  const requestLogout = () => {
+    setIsLogoutModalOpen(true)
+  }
+  const confirmLogout = async () => {
+    await handleLogout();
+    setIsLogoutModalOpen(false);
+  }
   // Authentication Effect
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -1527,6 +1583,13 @@ export default function App() {
         type={alert.type} 
         onClose={() => setAlert({ message: '', type: '' })} 
       />
+      <ConfirmationModal
+      isOpen={isLogoutModalOpen}
+      onClose={() => setIsLogoutModalOpen(false)} 
+      onConfirm={confirmLogout} 
+      title="Confirm Logout"
+      message="Are you sure you want to log out of your session?"
+      />
       <style>
         {`
           @media print {
@@ -1555,7 +1618,7 @@ export default function App() {
           <Header 
             currentView={currentView} 
             setView={setView} 
-            onLogout={handleLogout} 
+            onLogout={requestLogout} 
           />
           <main>
             {renderView()}
