@@ -150,7 +150,7 @@ const Header = ({ currentView, setView, onLogout}) => {
     { name: 'Dashboard', icon: LayoutDashboard, view: 'dashboard' },
     { name: 'Inventory', icon: Boxes, view: 'inventory' },
     { name: 'Point of Sale', icon: ShoppingCart, view: 'pos' },
-    { name: 'Prescriptions', icon: ClipboardList, view: 'prescriptions' }, // Changed from ClipboardText
+    { name: 'Prescriptions', icon: ClipboardList, view: 'prescriptions' },
   ];
 
   return (
@@ -158,7 +158,12 @@ const Header = ({ currentView, setView, onLogout}) => {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
-            <span className="text-2xl font-bold text-indigo-600">RxOptima</span>
+          <img 
+            src="/rxoptima-theicon.png" 
+            alt="RxOptima Logo" 
+            className="h-8 w-8 mr-2" 
+          />
+          <span className="text-2xl font-bold text-indigo-600">RxOptima</span>
           </div>
           <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
             {navItems.map((item) => (
